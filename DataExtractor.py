@@ -4,12 +4,15 @@ import os
 import logger # type: ignore
 
 class DataExtractor:
-    def __init__(self):
-        self.nve_magasin_data_url = 'https://biapi.nve.no/magasinstatistikk/api/Magasinstatistikk/HentOffentligData'
-        self.nve_magasin_data_url_last_week = 'https://biapi.nve.no/magasinstatistikk/api/Magasinstatistikk/HentOffentligDataSisteUke'
+    def __init__(self, filter_omrType: list = None) -> None:
+        self.nve_magasin_data_url: str  = 'https://biapi.nve.no/magasinstatistikk/api/Magasinstatistikk/HentOffentligData'
+        self.nve_magasin_data_url_last_week: str = 'https://biapi.nve.no/magasinstatistikk/api/Magasinstatistikk/HentOffentligDataSisteUke'
         
-        self.data_base_folder = './db/'
-        self.output_separator = ';' 
+        self.data_base_folder: str  = './db/'
+        self.output_separator: str = ';' 
+        
+        self.filter_omrType = filter_omrType
+        
         
     def update_hydrological_balance(self) -> None:
         """Update the hydrological balance of the system."""
@@ -72,8 +75,7 @@ class DataExtractor:
         
         return response.json()
     
-    def get_last_week_magasin_dataframe(self,
-                                      filter_omrType: list = None) -> pd.DataFrame:
+    def get_last_week_magasin_dataframe(self) -> pd.DataFrame:
         """Convert last week's magasin data to a pandas DataFrame."""
         
         magasin_data_dict : dict = self.parse_last_week_magasin_data()
@@ -83,8 +85,8 @@ class DataExtractor:
                 magasin_data_dict = magasin_data_dict[key]
                 break
         
-        if filter_omrType:
-            magasin_data = [m for m in magasin_data_dict if m.get('omrType') in filter_omrType]
+        if self.filter_omrType:
+            magasin_data = [m for m in magasin_data_dict if m.get('omrType') in self.filter_omrType]
         else:
             magasin_data = list(magasin_data_dict)
         
@@ -92,8 +94,7 @@ class DataExtractor:
         
         return magasin_data
     
-    def get_magasin_dataframe(self,
-                              filter_omrType: list = None) -> pd.DataFrame:
+    def get_magasin_dataframe(self) -> pd.DataFrame:
         """Convert magasin data to a pandas DataFrame."""
         
         magasin_data_dict : dict = self.parse_magasin_data()
@@ -104,20 +105,15 @@ class DataExtractor:
                 magasin_data_dict = magasin_data_dict[key]
                 break
 
-        # filter the list of dicts by omrType (if provided)
-        if filter_omrType:
-            magasin_data = [m for m in magasin_data_dict if m.get('omrType') in filter_omrType]
+        if self.filter_omrType:
+            magasin_data = [m for m in magasin_data_dict if m.get('omrType') in self.filter_omrType]
         else:
             magasin_data = list(magasin_data_dict)
         
-        magasin_data = sorted(magasin_data, key=lambda x: (x["iso_aar"], x["iso_uke"]))
-
-        
+        magasin_data = sorted(magasin_data, key=lambda x: (x["iso_aar"], x["iso_uke"]))   
     
         magasin_df: pd.DataFrame = pd.DataFrame(magasin_data)
-        
-        
-        
+             
         return magasin_df
     
     def save_magasin_dataframe(self, magasin_data_df: pd.DataFrame, filename: str = '01_magasin_data.csv') -> None:
@@ -128,14 +124,14 @@ class DataExtractor:
         
     def magasin_pipeline(self) -> None:
         
-        magasin_data_df = self.get_magasin_dataframe(filter_omrType = ['EL'])
+        magasin_data_df = self.get_magasin_dataframe()
         self.save_magasin_dataframe(magasin_data_df, filename='01_magasin_data.csv')
         
         return
     
     def update_magasin_pipeline(self) -> None:
         
-        cur_magasin_data_df = self.get_last_week_magasin_dataframe(filter_omrType = ['EL'])
+        cur_magasin_data_df = self.get_last_week_magasin_dataframe()
         print(cur_magasin_data_df)
         with open(os.path.join(self.data_base_folder, '01_magasin_data.csv'), encoding='utf-8') as f:
             existing_df = pd.read_csv(f, sep=self.output_separator, encoding='utf-8')
@@ -160,32 +156,9 @@ class DataExtractor:
             print("01_magasin_data-up.csv updated with last-week magasin data")
         
         return
-        
-    
-def make_df():
-    mag = DataExtractor()
-    
-    magasin_data: pd.DataFrame = pd.read_json('Magasinstatistikk.json')
-        
-    print(magasin_data.head())
-    print(magasin_data.columns)
-    print(magasin_data.sort_values(by = ['iso_aar', 'iso_uke']))
-    # print unique combinations of omrType and omrnr (fallback to individual uniques if absent)
-    
-    unique_pairs = magasin_data[['omrType', 'omrnr']].drop_duplicates()
-    print(unique_pairs)
-    
-    # replace selection with:
-    input_json = pd.read_json('Magasinstatistikk.json')
-    
-    
-    magasin_df = mag.get_magasin_dataframe(['EL'])
-    print(magasin_df)
-
 
 if __name__ == "__main__":
-    
-    hyd = DataExtractor()
-    hyd.update_magasin_pipeline()
+    hyd = DataExtractor(filter_omrType=['EL'])
+    hyd.magasin_pipeline()
     
 
