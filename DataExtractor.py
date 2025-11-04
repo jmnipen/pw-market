@@ -94,7 +94,7 @@ class DataExtractor:
         
         return magasin_data
     
-    def get_magasin_dataframe(self) -> pd.DataFrame:
+    def get_magasin_dataframe(self, filter_omrType) -> pd.DataFrame:
         """Convert magasin data to a pandas DataFrame."""
         
         magasin_data_dict : dict = self.parse_magasin_data()
@@ -105,8 +105,8 @@ class DataExtractor:
                 magasin_data_dict = magasin_data_dict[key]
                 break
 
-        if self.filter_omrType:
-            magasin_data = [m for m in magasin_data_dict if m.get('omrType') in self.filter_omrType]
+        if filter_omrType:
+            magasin_data = [m for m in magasin_data_dict if m.get('omrType') in filter_omrType]
         else:
             magasin_data = list(magasin_data_dict)
         
@@ -156,9 +156,13 @@ class DataExtractor:
             print("01_magasin_data-up.csv updated with last-week magasin data")
         
         return
+    
+    def pipeline_elspot_capacity(self) -> None:
+        cur_magasin_data_df = self.get_last_week_magasin_dataframe()
+        print(cur_magasin_data_df)
 
 if __name__ == "__main__":
     hyd = DataExtractor(filter_omrType=['EL'])
     hyd.magasin_pipeline()
-    
+    hyd.pipeline_elspot_capacity()
 
